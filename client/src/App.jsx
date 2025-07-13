@@ -2,64 +2,69 @@ import { useEffect, useState } from 'react'
 
 function App() {
   const [airbnb, setAirbnb] = useState(null)
-  const [wifi, setWifi] = useState(null)
-  const [weather, setWeather] = useState(null)
+  const [isHost, setIsHost] = useState(false)
+  const [editData, setEditData] = useState({ bookings: '', occupancy: '', revenue: '' })
+
+  const fetchData = () => {
+    fetch('http://localhost:5000/api/airbnb').then(res => res.json()).then(data => {
+      setAirbnb(data)
+      setEditData(data)
+    })
+  }
 
   useEffect(() => {
-    const fetchData = () => {
-    fetch('http://localhost:5000/api/airbnb').then(res => res.json()).then(setAirbnb)
-    fetch('http://localhost:5000/api/wifi').then(res => res.json()).then(setWifi)
-    fetch('http://localhost:5000/api/weather').then(res => res.json()).then(setWeather)
-    }
-
     fetchData()
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
   }, [])
 
+  const handleSave = () => {
+    fetch('http://localhost:5000/api/airbnb', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editData),
+    }).then(() => fetchData())
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-gray-800">
-      <h1 className="text-3xl font-bold mb-6">🏠 Smart Airbnb Dashboard</h1>
+      <div className="flex justify-between mb-4">
+        <h1 className="text-3xl font-bold">🏠 Smart Airbnb Dashboard</h1>
+        <button
+          onClick={() => setIsHost(!isHost)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-xl shadow"
+        >
+          {isHost ? 'Guest View' : 'Host Login'}
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Airbnb Metrics */}
-        <div className="bg-white rounded-2xl shadow p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-4 rounded-2xl shadow">
           <h2 className="text-xl font-semibold mb-2">📊 Airbnb Stats</h2>
           {airbnb ? (
-            <ul>
-              <li>Bookings: {airbnb.bookings}</li>
-              <li>Occupancy: {airbnb.occupancy}</li>
-              <li>Revenue: {airbnb.revenue}</li>
-            </ul>
-          ) : (
-            <p>Loading...</p>
-          )}
-        </div>
-
-        {/* Wi-Fi Status */}
-        <div className="bg-white rounded-2xl shadow p-4">
-          <h2 className="text-xl font-semibold mb-2">📶 Wi-Fi</h2>
-          {wifi ? (
-            <ul>
-              <li>Status: {wifi.status}</li>
-              <li>Speed: {wifi.speed}</li>
-            </ul>
-          ) : (
-            <p>Loading...</p>
-          )}
-        </div>
-
-        {/* Weather Info */}
-        <div className="bg-white rounded-2xl shadow p-4">
-          <h2 className="text-xl font-semibold mb-2">🌤️ Weather</h2>
-          {weather ? (
-            <ul>
-              <li>Temp: {weather.temp}</li>
-              <li>Condition: {weather.condition}</li>
-            </ul>
-          ) : (
-            <p>Loading...</p>
-          )}
+            isHost ? (
+              <div className="space-y-2">
+                <input className="w-full border rounded p-2" placeholder="Bookings"
+                  value={editData.bookings} onChange={e => setEditData({ ...editData, bookings: e.target.value })}
+                />
+                <input className="w-full border rounded p-2" placeholder="Occupancy"
+                  value={editData.occupancy} onChange={e => setEditData({ ...editData, occupancy: e.target.value })}
+                />
+                <input className="w-full border rounded p-2" placeholder="Revenue"
+                  value={editData.revenue} onChange={e => setEditData({ ...editData, revenue: e.target.value })}
+                />
+                <button onClick={handleSave} className="bg-green-500 text-white px-4 py-2 rounded">
+                  Save
+                </button>
+              </div>
+            ) : (
+              <ul>
+                <li>Bookings: {airbnb.bookings}</li>
+                <li>Occupancy: {airbnb.occupancy}</li>
+                <li>Revenue: {airbnb.revenue}</li>
+              </ul>
+            )
+          ) : <p>Loading...</p>}
         </div>
       </div>
     </div>
