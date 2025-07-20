@@ -1,100 +1,201 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { motion } from 'framer-motion';
 
 function App() {
-  const [airbnb, setAirbnb] = useState(null)
-  const [isHost, setIsHost] = useState(false)
-  const [editData, setEditData] = useState({ bookings: '', occupancy: '', revenue: '' })
+  const [airbnb, setAirbnb] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [internet, setInternet] = useState(null);
+  const [guestinfo, setGuestInfo] = useState(null);
 
-  const fetchData = () => {
-    fetch('http://localhost:5000/api/airbnb').then(res => res.json()).then(data => {
-      setAirbnb(data)
-      setEditData(data)
-    })
-  }
+  const [accessGranted, setAccessGranted] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+  const correctCode = "1234"; // Change this to your actual code
 
+  // Fetch data from backend
+  const fetchAirbnb = () => {
+    fetch('http://localhost:5000/api/airbnb')
+      .then(res => res.json())
+      .then(setAirbnb);
+  };
+
+  const fetchWeather = () => {
+    fetch('http://localhost:5000/api/weather')
+      .then(res => res.json())
+      .then(setWeather);
+  };
+
+  const fetchInternet = () => {
+    fetch('http://localhost:5000/api/internet')
+      .then(res => res.json())
+      .then(setInternet);
+  };
+
+  const fetchGuestInfo = () => { 
+    fetch('http://localhost:5000/api/sheet')
+    .then(res => res.json())
+    .then(setGuestInfo);
+  };
+
+  // Fetch all data initially and every 60 seconds
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    fetchAirbnb();
+    fetchWeather();
+    fetchInternet();
+    fetchGuestInfo();
 
-  const handleSave = () => {
-    fetch('http://localhost:5000/api/airbnb', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editData),
-    }).then(() => fetchData())
-  }
+    const interval = setInterval(() => {
+      fetchAirbnb();
+      fetchWeather();
+      fetchInternet();
+      fetchGuestInfo();
+    }, 60000);
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6 text-gray-800">
-      <div className="flex justify-between mb-4">
-        <h1 className="text-3xl font-bold">🏠 Smart Airbnb Dashboard</h1>
-        <button
-          onClick={() => setIsHost(!isHost)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-xl shadow"
-        >
-          {isHost ? 'Guest View' : 'Host Login'}
-        </button>
-      </div>
+    return () => clearInterval(interval);
+  }, []);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold mb-2">📊 Airbnb Stats</h2>
-          {airbnb ? (
-            isHost ? (
-              <div className="space-y-2">
-                <input className="w-full border rounded p-2" placeholder="Bookings"
-                  value={editData.bookings} onChange={e => setEditData({ ...editData, bookings: e.target.value })}
-                />
-                <input className="w-full border rounded p-2" placeholder="Occupancy"
-                  value={editData.occupancy} onChange={e => setEditData({ ...editData, occupancy: e.target.value })}
-                />
-                <input className="w-full border rounded p-2" placeholder="Revenue"
-                  value={editData.revenue} onChange={e => setEditData({ ...editData, revenue: e.target.value })}
-                />
-                <button onClick={handleSave} className="bg-green-500 text-white px-4 py-2 rounded">
-                  Save
-                </button>
-              </div>
-            ) : (
-              <ul>
-                <li>Bookings: {airbnb.bookings}</li>
-                <li>Occupancy: {airbnb.occupancy}</li>
-                <li>Revenue: {airbnb.revenue}</li>
-              </ul>
-            )
-          ) : <p>Loading...</p>}
+  const goFullscreen = () => {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    }
+  };
+  
+
+  // 🔐 Access code prompt
+  if (!accessGranted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="bg-white p-6 rounded-2xl shadow text-center w-full max-w-sm">
+          {/* Fullscreen Button */}
+      <button
+        onClick={goFullscreen}
+        className="absolute top-4 right-4 bg-black text-white px-3 py-1 rounded shadow"
+      >
+        Fullscreen
+      </button>
+          <h2 className="text-xl font-semibold mb-4">🔐 Enter Access Code</h2>
+          <input
+            type="password"
+            className="border rounded px-4 py-2 w-full mb-4"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="Access Code"
+          />
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            onClick={() => {
+              if (codeInput === correctCode) {
+                setAccessGranted(true);
+              } else {
+                alert("Incorrect code");
+              }
+            }}
+          >
+            Unlock
+          </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-export default App
-
-
-
-/*
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import { useEffect, useState } from 'react'
-
-function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() =>{
-    fetch("http://127.0.0.1:5000/api/hello")
-      .then(res => res.json())
-      .then(data => setMessage(data.message));
-  },[]);
+    );
+  }
 
   return (
+    <div className="p-6 bg-gray-100 min-h-screen font-sans">
+      <h1 className="text-3xl font-bold mb-6 text-center">🏠 SmartBnB Dashboard</h1>
 
-    <div className="h-screen flex items-center justify-center bg-gray-100 text-xl font-semibold">
-      <p>{message || "Loading..."}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+        {/* Airbnb Stats */}
+        {airbnb && (
+          <motion.div
+            className="bg-white p-4 rounded-2xl shadow"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">📊 Airbnb Stats</h2>
+            <p>Bookings: <strong>{airbnb.bookings}</strong></p>
+            <p>Occupancy: <strong>{airbnb.occupancy}</strong></p>
+            <p>Revenue: <strong>{airbnb.revenue}</strong></p>
+          </div>
+          </motion.div>
+        )}
+
+        {/* Weather Card */}
+        {weather && (
+          <motion.div
+            className="bg-white p-4 rounded-2xl shadow"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">🌤️ Local Weather</h2>
+            <p className="text-2xl">{weather.temp}°C</p>
+            <p>{weather.condition}</p>
+            <img
+              src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+              alt="Weather icon"
+              className="w-16 h-16"
+            />
+          </div>
+          </motion.div>
+        )}
+
+        {/* Internet Speed */}
+        {internet && (
+          <motion.div
+            className="bg-white p-4 rounded-2xl shadow"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">📶 Wi-Fi Speed</h2>
+            <p>Download: {internet.download}</p>
+            <p>Upload: {internet.upload}</p>
+            <p>Ping: {internet.ping}</p>
+          </div>
+          </motion.div>
+        )}
+
+        {/* QR Code */}
+        <div className="bg-white p-4 rounded-2xl shadow text-center">
+          <h2 className="text-xl font-semibold mb-4">📱 Open Dashboard</h2>
+          <QRCodeCanvas
+            value="http://192.168.1.136:5173"  // ⬅️ Replace with your Pi's actual local IP!
+            size={150}
+            includeMargin={true}
+          />
+          <p className="mt-2 text-sm text-gray-500">Scan to open on your phone</p>
+        </div>
+
+
+        {/* Guest Info Card */}
+        {guestInfo.length > 0 && (
+          <motion.div
+            className="bg-white p-4 rounded-2xl shadow"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+        <div className="bg-white p-4 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-2">🛎️ Guest Info</h2>
+          <ul className="space-y-2">
+            {guestInfo.map((item, index) => (
+              <li key={index}>
+                <span className="font-semibold">{item.title}:</span> {item.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+        </motion.div>
+      )}
+
+      </div>
     </div>
+  );
+}
 
-    */
+export default App;
 
